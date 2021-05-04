@@ -1,0 +1,543 @@
+---
+title: "Analysis of sex-related income disparities - National Longitudinal Survey of Youth, 1997 cohort"
+author: "Alexander Talbott"
+date: ''
+output: html_document
+---
+In this document, we will be analyzing any differences in yearly income between men and women according to the National Longitudinal Survey of Youth from 1997.
+
+```{r global-options, include=FALSE}
+knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/',
+                      echo=FALSE, warning=FALSE, message=FALSE)
+options(scipen=4)
+```
+
+```{r}
+library(tidyverse)
+library(knitr)
+```
+
+
+### Data Processing and Summarization
+```{r}
+url <- "http://www.andrew.cmu.edu/user/achoulde/94842/final_project/nlsy97/nlsy97_Nov2020.csv"
+```
+The data set being used in this analysis is available at `r url`
+```{r}
+# Import starting data
+nlsy <- read_csv(url)
+```
+
+#### Variables Included
+
+```{r}
+# Change column names to question name abbreviations (you will want to change these further)
+colnames(nlsy) <- c("PSTRAN_GPA.01_PSTR",
+    "INCARC_TOTNUM_XRND",
+    "INCARC_AGE_FIRST_XRND",
+    "INCARC_LENGTH_LONGEST_XRND",
+    "PUBID_1997",
+    "YSCH-36400_1997",
+    "YSCH-37000_1997",
+    "YSAQ-010_1997",
+    "YSAQ-369_1997",
+    "YEXP-300_1997",
+    "YEXP-1500_1997",
+    "YEXP-1600_1997",
+    "YEXP-1800_1997",
+    "YEXP-2000_1997",
+    "sex",
+    "KEY_BDATE_M_1997",
+    "KEY_BDATE_Y_1997",
+    "PC8-090_1997",
+    "PC8-092_1997",
+    "PC9-002_1997",
+    "PC12-024_1997",
+    "PC12-028_1997",
+    "CV_AGE_12/31/96_1997",
+    "CV_BIO_MOM_AGE_CHILD1_1997",
+    "CV_BIO_MOM_AGE_YOUTH_1997",
+    "CV_CITIZENSHIP_1997",
+    "CV_ENROLLSTAT_1997",
+    "CV_HH_NET_WORTH_P_1997",
+    "CV_YTH_REL_HH_CURRENT_1997",
+    "CV_MSA_AGE_12_1997",
+    "CV_URBAN-RURAL_AGE_12_1997",
+    "CV_SAMPLE_TYPE_1997",
+    "CV_HGC_BIO_DAD_1997",
+    "CV_HGC_BIO_MOM_1997",
+    "CV_HGC_RES_DAD_1997",
+    "CV_HGC_RES_MOM_1997",
+    "race",
+    "YSCH-6800_1998",
+    "YSCH-7300_1998",
+    "YSAQ-372B_1998",
+    "YSAQ-371_2000",
+    "YSAQ-282J_2002",
+    "YSAQ-282Q_2002",
+    "CV_HH_NET_WORTH_Y_2003",
+    "CV_BA_CREDITS.01_2004",
+    "YSAQ-000B_2004",
+    "YSAQ-373_2004",
+    "YSAQ-369_2005",
+    "CV_BIO_CHILD_HH_2007",
+    "YTEL-52~000001_2007",
+    "YTEL-52~000002_2007",
+    "YTEL-52~000003_2007",
+    "YTEL-52~000004_2007",
+    "CV_BIO_CHILD_HH_2009",
+    "CV_COLLEGE_TYPE.01_2011",
+    "CV_INCOME_FAMILY_2011",
+    "CV_HH_SIZE_2011",
+    "CV_HH_UNDER_18_2011",
+    "CV_HH_UNDER_6_2011",
+    "CV_HIGHEST_DEGREE_1112_2011",
+    "CV_BIO_CHILD_HH_2011",
+    "YSCH-3112_2011",
+    "YSAQ-000A000001_2011",
+    "YSAQ-000A000002_2011",
+    "YSAQ-000B_2011",
+    "YSAQ-360C_2011",
+    "YSAQ-364D_2011",
+    "YSAQ-371_2011",
+    "YSAQ-372CC_2011",
+    "YSAQ-373_2011",
+    "YSAQ-374_2011",
+    "YEMP_INDCODE-2002.01_2011",
+    "CV_BIO_CHILD_HH_2015",
+    "YEMP_INDCODE-2002.01_2017",
+    "YEMP_OCCODE-2002.01_2017",
+    "CV_MARSTAT_COLLAPSED_2017",
+    "YINC-1400_2017",
+    "income",
+    "YINC-1800_2017",
+    "YINC-2400_2017",
+    "YINC-2600_2017",
+    "YINC-2700_2017",
+    "CVC_YTH_REL_HH_AGE6_YCHR_XRND",
+    "CVC_SAT_MATH_SCORE_2007_XRND",
+    "CVC_SAT_VERBAL_SCORE_2007_XRND",
+    "CVC_ACT_SCORE_2007_XRND",
+    "CVC_HH_NET_WORTH_20_XRND",
+    "CVC_HH_NET_WORTH_25_XRND",
+    "CVC_ASSETS_FINANCIAL_25_XRND",
+    "CVC_ASSETS_DEBTS_20_XRND",
+    "CVC_HH_NET_WORTH_30_XRND",
+    "CVC_HOUSE_VALUE_30_XRND",
+    "CVC_HOUSE_TYPE_30_XRND",
+    "CVC_ASSETS_FINANCIAL_30_XRND",
+    "CVC_ASSETS_DEBTS_30_XRND")
+#nlsy[nlsy < 0]  <- NA
+nlsy <- nlsy %>%
+  select(income = income,
+         race = race,
+         sex = sex,
+         total.incarceration = INCARC_TOTNUM_XRND,
+         age.first.incarceration = INCARC_AGE_FIRST_XRND,
+         length.longest.incarceration = INCARC_LENGTH_LONGEST_XRND,
+         ever.use.hard.drug = `YSAQ-372B_1998`,
+         ever.use.marijuana = `YSAQ-369_2005`,
+         weight = `YSAQ-000B_2011`,
+         collapsed.marital.status = CV_MARSTAT_COLLAPSED_2017)
+```
+The variables we will be focusing our analysis on are as follows:
+
+* Income
+* Race
+* Sex
+* Total number of incarcerations
+* Age of first incarceration
+* Length of longest incarceration
+* Whether or not the respondant ever used hard drugs
+* Whether or not the respondant ever used marijuana
+* Weight
+* Marital Status
+
+```{r}
+head(nlsy) %>%
+  kable(format = "markdown", digits=2, col.names = c(
+    "Income",
+    "Race",
+    "Sex",
+    "Total number of incarcerations",
+    "Age of first incarceration",
+    "Length of longest incarceration",
+    "Whether or not the respondant ever used hard drugs",
+    "Whether or not the respondant ever used marijuana",
+    "Weight",
+    "Marital Status"
+  ))
+```
+Here we see a small subset of the data but immediately we can see some issues in some of the variables including invalid or missing values. In the following subsections we will do exploratory data analysis and try to clean up the data before building any models.
+
+#### Income
+```{r}
+# Histogram
+qplot(nlsy$income) +
+  ggtitle("Distribution of Income") +
+  xlab("Income") +
+  ylab("Count")
+
+n.topcoded <- with(nlsy, sum(income == max(income, na.rm = TRUE), na.rm = TRUE))
+n.refusal <- sum(nlsy$income == -1)
+n.dont.know <- sum(nlsy$income == -2)
+n.invalid <- sum(nlsy$income == -3)
+n.skip <- sum(nlsy$income == -4)
+n.non.interview <- sum(nlsy$income == -5)
+
+nlsy <- subset(nlsy, income>0)
+```
+Here we see the income data is skewed to the right. Additionally, we see a bump at the right-most part in the income distribution. This is due to the highest incomes being topcoded to `r max(nlsy$income)` which is the average income of the top `r n.topcoded` earners. There are also some invalid values in the income of below zero. There are `r n.refusal` values of -1 which signifies a refusal to answer, `r n.dont.know` values of -2 meaning a response of "Don't Know", `r n.invalid` responses of -3 which signifies an invalid reponse, `r n.skip` respondants skipped the question, and `r n.non.interview` that were not interviewed. Because the analysis relies on these values, all of the negative income responses will be dropped. After dropping these rows, we are left with `r nrow(nlsy)` rows.
+
+#### Sex and Race
+```{r}
+nlsy <- nlsy %>%
+  mutate(sex = recode_factor(sex,
+    `1` = "Male",
+    `2` = "Female"
+  )) %>%
+  mutate(race = recode_factor(race,
+    `1` = "Black",
+    `2` = "Hispanic",
+    `3` = "Mixed Race (Non-Hispanic)",
+    `4` = "Non-Black / Non-Hispanic"
+  )) %>%
+  mutate(race = factor(race, levels = c(
+    "Non-Black / Non-Hispanic",
+    "Black",
+    "Hispanic",
+    "Mixed Race (Non-Hispanic)"
+  )))
+table(nlsy$sex, nlsy$race) %>%
+  kable(format = "markdown", digits=2)
+```
+The sex and race variables are coded as numbers so we will rename them to make them more meaningful. We can also see the distribution between the sexes is about even with `r sum(nlsy$sex == "Male")` males and `r sum(nlsy$sex == "Female")` females whereas the distribution between the races is skewed toward the Non-Black/Non-Hispanic groups with `r sum(nlsy$race == "Non-Black / Non-Hispanic")` respondants and only `r sum(nlsy$race == "Mixed Race (Non-Hispanic)")` respondants of mixed race.
+
+#### Incarceration variables
+```{r figures-side, fig.show="hold", out.width="33%"}
+qplot(nlsy$total.incarceration) +
+  ggtitle("Distribution of Total Incarcerations") +
+  xlab("Total Incarcerations") +
+  ylab("Count")
+qplot(nlsy$age.first.incarceration) +
+  ggtitle("Distribution of Age at First Incarceration") +
+  xlab("Age at First Incarceration") +
+  ylab("Count")
+qplot(nlsy$length.longest.incarceration) +
+  ggtitle("Distribution of Length of Longest Incarceration") +
+  xlab("Length of Longest Incarceration") +
+  ylab("Count")
+```
+Here we can see the distribution of total incarcerations, age of first incarceration, and length of longest incarceration are all right skewed. These graphs are distorted though as most respondants in the data set have never been incarcerated. In the total incarcerations graph, `r round(sum(nlsy$total.incarceration<1)/length(nlsy$total.incarceration),4)*100`% of the responses are not useful as well as `r round(sum(nlsy$age.first.incarceration<1)/length(nlsy$age.first.incarceration),4)*100`% in the age graph and `r round(sum(nlsy$length.longest.incarceration<1)/length(nlsy$length.longest.incarceration),4)*100`% in the length graph. Below we redo the graphs by removing respondants who either did not answer this question or have not been incarcerated to get a better idea of the incaerceration data. Additionally, we will recode the invalid answers for all three variables to "0" as the respondants who didn't answer most likely do not have any prior incarcerations.
+
+```{r fig.show="hold", out.width="50%"}
+nlsy$total.incarceration[nlsy$total.incarceration < 0]  <-  0
+nlsy$age.first.incarceration[nlsy$age.first.incarceration < 0]  <-  0
+nlsy$length.longest.incarceration[nlsy$length.longest.incarceration < 0]  <-  0
+
+# this is the subset of individuals who have been incarcerated.
+# both total incarcerations and age of first incarceration are above 0
+sub.incarc <- subset(nlsy, total.incarceration > 0 & age.first.incarceration > 0)
+
+qplot(sub.incarc$total.incarceration) +
+  ggtitle("Distribution of Total Incarcerations") +
+  xlab("Total Incarcerations") +
+  ylab("Count")
+qplot(sub.incarc$age.first.incarceration) +
+  ggtitle("Distribution of Age at First Incarceration") +
+  xlab("Age at First Incarceration") +
+  ylab("Count")
+```
+
+```{r fig.align="center", out.width="50%"}
+qplot(sub.incarc$length.longest.incarceration) +
+  ggtitle("Distribution of Length of Incarceration") +
+  xlab("Length of Longest Incarceration") +
+  ylab("Count")
+```
+Now we can see results that make a little more sense. Total incarcerations and the length of longest incarceration both have long, right tails which makes sense as most people only have a few, short sentences. The age at first incarceration graph has an unusual distribution that is centered around the mean age of `r round(mean(sub.incarc$age.first.incarceration),0)` years old with a short tail to the left and a long tail to the right. In total, we observe `r nrow(sub.incarc)` respondants who have been incarcerated.
+
+#### Drug variables
+```{r}
+nlsy$ever.use.hard.drug[nlsy$ever.use.hard.drug < 0]  <-  NA
+nlsy$ever.use.marijuana[nlsy$ever.use.marijuana < 0]  <-  NA
+nlsy <- nlsy %>%
+  mutate(ever.use.hard.drug = recode_factor(ever.use.hard.drug,
+    `0` = "No",
+    `1` = "Yes",
+  )) %>%
+  mutate(ever.use.marijuana = recode_factor(ever.use.marijuana,
+    `0` = "No",
+    `1` = "Yes",
+  ))
+table(nlsy$ever.use.marijuana, useNA="always") %>%
+  kable(format = "markdown", digits=2, col.names=c("Have you ever used marijuana?", "Count"))
+```
+After analyzing the marijuana data we see some issues. Out of all the respondants, only `r sum(nlsy$ever.use.marijuana == "Yes", na.rm=TRUE)` responded yes and `r sum(nlsy$ever.use.marijuana == "No", na.rm=TRUE)` responded no. This leaves `r sum(is.na(nlsy$ever.use.marijuana))` invalid responses accounting for `r round(sum(is.na(nlsy$ever.use.marijuana))/length(nlsy$ever.use.marijuana),4)*100`% of all responses. This is a problem in data collection we can't resolve so we will discard this variable from further analysis.
+
+```{r}
+nlsy <- subset(nlsy, select = -ever.use.marijuana)
+
+table(nlsy$ever.use.hard.drug, useNA="always") %>%
+  kable(format = "markdown", digits=2, col.names=c("Have you ever used hard drugs?", "Count"))
+```
+The data about hard drug usage, however, looks a lot better. `r sum(nlsy$ever.use.hard.drug == "Yes", na.rm=TRUE)` responded yes and `r sum(nlsy$ever.use.hard.drug == "No", na.rm=TRUE)` responded no meaning only `r round(sum(is.na(nlsy$ever.use.hard.drug))/length(nlsy$ever.use.hard.drug),4)*100`% of responses are invalid. We can probably assume that if someone didn't respond to this question they haven't used hard drugs, so we will change the invalid responses to "No" responses.
+
+```{r}
+nlsy$ever.use.hard.drug[is.na(nlsy$ever.use.hard.drug)]  <-  "No"
+ggplot(nlsy, aes(x=ever.use.hard.drug, fill=ever.use.hard.drug)) +
+  geom_bar() +
+  ggtitle("Have you ever used Hard Drugs?") +
+  labs(x="", y="Count", fill="")
+```
+After including the invalid responses as "No" answers, we observe the percentage of respondants who say they have tried hard drugs is `r round(sum(nlsy$ever.use.hard.drug == "Yes")/length(nlsy$ever.use.hard.drug),4)*100`%.
+
+#### Weight
+```{r}
+nlsy <- subset(nlsy, weight>=0)
+ggplot(nlsy, aes(x=weight)) + 
+  geom_histogram()+
+  ggtitle("Distribution of Weight") +
+  xlab("Weight") +
+  ylab("Count")
+```
+After removing nonsense values, we see the distribution of weight among respondents is skewed slightly to the right. It has a mean of `r round(mean(nlsy$weight, na.rm=TRUE),2)`lbs and a standard deviation of `r round(sd(nlsy$weight, na.rm=TRUE),2)`.
+```{r}
+ggplot(nlsy, aes(x=weight, fill=sex)) +
+  geom_histogram(alpha=0.5, position="identity") +
+  ggtitle("Comparison of weight by sex") +
+  xlab("Weight") +
+  ylab("Count")
+
+weight.sex.t <- t.test(nlsy$weight ~ nlsy$sex)
+```
+This plot shows the difference in weight between males and females. Unsurprisingly, this difference is statistically significant with males weighing `r round(weight.sex.t$estimate[1] - weight.sex.t$estimate[2], 2)`lbs more on average and a p-value of `r round(weight.sex.t$p.value, 4)`.
+
+#### Marital Status
+```{r}
+nlsy <- nlsy %>%
+  mutate(collapsed.marital.status = recode_factor(collapsed.marital.status,
+    `-5` = "Missing",
+    `-4` = "Missing",
+    `-3` = "Missing",
+    `-2` = "Missing",
+    `-1` = "Missing",
+    `0` = "Never-married",
+    `1` = "Married",
+    `2` = "Separated",
+    `3` = "Divorced",
+    `4` = "Widowed"
+  )) %>%
+  mutate(collapsed.marital.status = factor(collapsed.marital.status, levels = c(
+    "Married",
+    "Divorced",
+    "Missing",
+    "Never-married",
+    "Separated",
+    "Widowed"
+  )))
+
+ggplot(nlsy, aes(x=collapsed.marital.status, fill=collapsed.marital.status)) +
+  geom_bar() +
+  ggtitle("Distribution of Marital Status") +
+  labs(x="Marital Status",y="Count",fill="Marital Status")
+```
+After changing the codes in the marital status column to more meaningful names, we see the two dominant marital statuses are Never-married and Married together accounting for `r round((sum(nlsy$collapsed.marital.status=="Never-married", na.rm=TRUE) + sum(nlsy$collapsed.marital.status=="Married", na.rm=TRUE)) / length(nlsy$collapsed.marital.status)*100,2)`% of the total responses.
+
+```{r}
+head(nlsy, na.rm = TRUE) %>%
+  kable(format = "markdown", digits=2, col.names = c(
+    "Income",
+    "Race",
+    "Sex",
+    "Total number of incarcerations",
+    "Age of first incarceration",
+    "Length of longest incarceration",
+    "Whether or not the respondant ever used hard drugs",
+    "Weight",
+    "Marital Status"
+  ))
+```
+Now we can see that our data is much cleaner and makes much more sense after doing our data cleaning.
+
+### Methodology
+In this section, we will run some simple statistical tests to explore the relationships between the variables before we build a final regression model.
+
+To start, we will look at income distribution by race and sex. We can see the average income in both sexes is highest for Non-Black/Non-Hispanic people and lowest for Black people. 
+```{r fig.show="hold", out.width="50%"}
+nlsy.male <- subset(nlsy, sex == "Male")
+nlsy.female <- subset(nlsy, sex == "Female")
+
+ggplot(nlsy.male, aes(y=income, x=race, fill=race)) +
+  geom_violin(alpha=0.5, position="identity") +
+  ggtitle("Comparison of income by race (Males)") +
+  xlab("Race") +
+  ylab("Income")
+
+ggplot(nlsy.female, aes(y=income, x=race, fill=race)) +
+  geom_violin(alpha=0.5, position="identity") +
+  ggtitle("Comparison of income by race (Females)") +
+  xlab("Race") +
+  ylab("Income")
+
+nlsy.male %>%
+  group_by(race) %>%
+  summarize(round(mean(income, na.rm=TRUE), 0), 
+            round(sd(income, na.rm=TRUE) / sqrt(n()), 0)) %>%
+  kable(format = "markdown", digits=2, col.names=c("Race", "Mean Income", "Standard Error Income"), caption = "Males")
+
+nlsy.female %>%
+  group_by(race) %>%
+  summarize(round(mean(income, na.rm=TRUE), 0), 
+            round(sd(income, na.rm=TRUE) / sqrt(n()), 0)) %>%
+  kable(format = "markdown", digits=2, col.names=c("Race", "Mean Income", "Standard Error Income"), caption = "Females")
+
+race.income.anova.male <- summary(aov(income ~ race, data=nlsy.male))
+race.income.anova.female <- summary(aov(income ~ race, data=nlsy.female))
+```
+This is confirmed by ANOVA tests between income and race for each gender that are significant with p-values of `r round(race.income.anova.male[[1]]$'Pr(>F)',4)[1]` for both males and females.
+
+Additionally, even though the graphs above for Mixed Race people looks strange (full stops at the top and bottom incomes), after investigation, it is not due to any anomalies in the data. The graphs are most likely distorted due to the fact that the sample size for Mixed Race people is much lower than any of the other racial groups. 
+
+Another idea I was interested in exploring was the relationship between age at youngest incarceration and total incarcerations among respondants who have been incarcerated. To analyze this, I created a scatter plot below. I divided the data between males and females to see if there was any difference between the two groups.
+```{r}
+# update the valid incarceration subset
+# we dropped rows when we looked at the weight variable so this subset
+# needs to be updated to reflect the lost rows
+sub.incarc <- subset(nlsy, total.incarceration > 0 & age.first.incarceration > 0)
+
+ggplot(sub.incarc, aes(x=age.first.incarceration, y=total.incarceration, color=sex)) +
+  geom_point() +
+  labs(x="Age at First Incarceration", y="Total Incarcerations", color="Sex") +
+  ggtitle("Relationship between Incarcerations and Sex") +
+  stat_smooth()
+
+incarc.sex.t <- t.test(total.incarceration ~ sex, data=sub.incarc)
+age.sex.t <- t.test(age.first.incarceration ~ sex, data=sub.incarc)
+
+sub.ever.been.incarc <- nlsy %>%
+  mutate(ever.been.incarc = case_when(total.incarceration > 0 & age.first.incarceration > 0 ~ TRUE,
+                                             TRUE ~ FALSE))
+
+ever.been.incarc.t <- t.test(ever.been.incarc ~ sex, data=sub.ever.been.incarc)
+```
+The graphs here appear to show, of those who are incarcerated, men and women have a similar amount of total incarcerations. This is confirmed by a t-test. The mean years of incarceration for women is `r round(incarc.sex.t$estimate[2], 2)` years and `r round(incarc.sex.t$estimate[1], 2)` years for men. This is a insignificant difference with a p-value of `r round(incarc.sex.t$p.value, 4)`. Similarly, men and women show no statistically significant difference in the age of first incarceration with a insignificant p-value of `r round(age.sex.t$p.value, 4)`.
+
+On the other hand, looking at all respondants and whether they have been incarcerated or not, men appear to be more likely to be incarcerated. `r round(ever.been.incarc.t$estimate[1], 2)*100`% of men have been incarcerated and `r round(ever.been.incarc.t$estimate[2], 2)*100`% of women have been incarcerated. This difference is significant with a p-value of `r round(ever.been.incarc.t$p.value, 4)`.
+
+One final observation we should make before building a regression model is for collinearity among the variables. To do that, we will look at a pairs plot with a few of the variables most likely to be colinear.
+```{r}
+panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
+{
+    usr <- par("usr"); on.exit(par(usr))
+    par(usr = c(0, 1, 0, 1))
+    r <- abs(cor(x, y))
+    txt <- format(c(r, 0.123456789), digits = digits)[1]
+    txt <- paste0(prefix, txt)
+    if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
+    text(0.5, 0.5, txt, cex = pmax(1, cex.cor * r))
+}
+pairs(nlsy[,c("income","sex","age.first.incarceration", "length.longest.incarceration", "ever.use.hard.drug","total.incarceration")], lower.panel = panel.cor)
+```
+Here we see some definite colinearity between the incarceration variables, with the most pronounced colinearity happening between age of first incarceration and total incarcerations. This is not very surprising but it could have an impact on the regression model we build. 
+
+### Findings
+Now we will build a regression model to try and predict income based on other variables we have been working with. First, we will build a regression model with all of the variables and all of the data involved, then we will adjust it and see if we get different results. It is worth noting the baseline variables are Non-Black/Non-Hispanic, Male, never used hard drugs, and Married.
+```{r}
+lm1 <- lm(income ~ ., data=nlsy) 
+summary(lm1)$coef %>%
+  kable(format = "markdown", digits=2, col.names = c(
+    "Coefficient",
+    "Standard Error",
+    "t-value",
+    "p-value"
+  ))
+
+female.estimate <- summary(lm1)$coef['sexFemale', 'Estimate']
+race.estimate <- summary(lm1)$coef['raceBlack', 'Estimate']
+age.incarc.estimate <- summary(lm1)$coef['age.first.incarceration', 'Estimate']
+weight.estimate <- summary(lm1)$coef['weight', 'Estimate']
+```
+We can immediately see some interesting observations. Having a race of black appears to lower income by an average of \$`r round(abs(race.estimate),2)` and being a female appears to lower income by an average of \$`r round(abs(female.estimate),2)`. Another interesting observation is every additional year in age of youngest incarceration reduces income by \$`r round(abs(age.incarc.estimate),2)` suggesting those who get arrested later in life are worse off. This, however, could be due to colinearity as we saw earlier. Finally, the most surprising coefficient here is the significant estimate of weight. The model suggest every additional pound of weight reduces income by \$`r round(abs(weight.estimate),2)` on average.
+
+It seems strange that weight would be so predictive of one's income. I have a feeling it is interacting with another variable. I will test the interaction with the sex variable.
+```{r}
+weight.lm <- lm(income ~ weight*sex, data=nlsy)
+summary(weight.lm)$coef %>%
+  kable(format = "markdown", digits=2, col.names = c(
+    "Coefficient",
+    "Standard Error",
+    "t-value",
+    "p-value"
+  ))
+```
+This makes a lot more sense. We can see here the weight and sex variables are interacting. It makes sense that weight would be predictive as men typically weigh more than women. We will discard the weight variable from our final regression model.
+
+Now we will look at the residual plots to see if there are any issues with our model.
+```{r fig.show="hold", out.width="50%"}
+plot(lm1)
+```
+Our residuals plots look okay for the most part. There is some evidence of nonlinearity on the residuals vs fitted plot but it is probably okay. Similarly, in the leverage plot we don't see any outliers with a lot of leverage. The problem is with the QQ plot which shows, with very strong evidence, that the underlying data behind this regression is not normal. We already know this to be true though, as most of the data we saw above had big right skews.
+
+Now we will try to build a better regression model by manipulating the data. We will remove the colinear length of longest incarceration and age of first incarceration variables and remove the weight variable as it interacts with sex.
+```{r}
+final.nlsy <- nlsy %>%
+  subset(select = -weight) %>%
+  subset(select = -age.first.incarceration) %>%
+  subset(select = -length.longest.incarceration)
+
+lm2 <- lm(income ~ ., data=final.nlsy) 
+summary(lm2)$coef %>%
+  kable(format = "markdown", digits=2, col.names = c(
+    "Coefficient",
+    "Standard Error",
+    "t-value",
+    "p-value"
+  ))
+```
+This model seems to work better with a lot of significant predictors. We can see that being black reduces income, on average, by \$`r round(abs(summary(lm2)$coef['raceBlack', 'Estimate']),2)`, being a female reduces income, on average, by \$`r round(abs(summary(lm2)$coef['sexFemale', 'Estimate']),2)`, every additional year of incarceration reduces income, on average, by \$`r round(abs(summary(lm2)$coef['total.incarceration', 'Estimate']), 2)`, and being divorced reduces income, on average, by \$`r round(abs(summary(lm2)$coef['collapsed.marital.statusDivorced', 'Estimate']),2)`. These are all significant as well with very low p-values.
+
+Looking at the residual plots we see much of the same as the first model. The QQ plot shows that our data is not normally distributed. 
+```{r fig.show="hold", out.width="50%"}
+plot(lm2)
+```
+
+One final hypothesis we can test is the effect of the top-coded income amounts. As we showed before, `r n.topcoded` of the highest income earners are top-coded to an income of \$`r max(nlsy$income)` which is the average of all of their incomes. In this final regression model, we will remove these top-coded earners from the data and see if it has any effect on the outcome.
+```{r}
+no.top.nlsy <- subset(final.nlsy, income < max(final.nlsy$income))
+lm3 <- lm(income ~ ., data=no.top.nlsy) 
+summary(lm3)$coef %>%
+  kable(format = "markdown", digits=2, col.names = c(
+    "Coefficient",
+    "Standard Error",
+    "t-value",
+    "p-value"
+  ))
+```
+For the most part, the model stayed the same without the top earners except for one exception. The ever used hard drugs variable is now significant in the model without the top earners with an expected reduction in income of \$`r round(abs(summary(lm3)$coef['ever.use.hard.drugYes', 'Estimate']), 2)`.  I'm not really sure why this is as there are similar proportions of hard drugs users in the high-income group and everyone else.
+```{r}
+no.top.nlsy %>%
+  group_by(ever.use.hard.drug) %>%
+  summarize(n()) %>%
+  kable(format = "markdown", digits=2, caption="No top-earners", col.names = c(
+    "Have you ever used hard drugs?",
+    "Count"
+  ))
+
+only.top.nlsy <- subset(final.nlsy, income == max(final.nlsy$income))
+only.top.nlsy %>%
+  group_by(ever.use.hard.drug) %>%
+  summarize(n()) %>%
+  kable(format = "markdown", digits=2, caption="Top-earners", col.names = c(
+    "Have you ever used hard drugs?",
+    "Count"
+  ))
+```
+
+And looking at the residuals, we see similar issues as before but, in the QQ plot especially, excluding the top earners seems to have made our model fit the data at least a little bit better. This makes sense as the high earners made the model skew heavily to the upper end.
+```{r fig.show="hold", out.width="50%"}
+plot(lm3)
+```
+
+### Discussion
+In this model, I have observed various factors that seem to have significant influence on an individual's expected income. Important factors include race, sex, marital status, and prior incarceration. I observed drug usage and weight to most likely not be factors in determining an expected income. The biggest issue with my models is the non-normality of the underlying data. Because the data is non-normal it is difficult to trust the outcome of a linear regression. However, because the sample size is so large, I still feel comfortable trusting the results of the regression. Furthermore, none of the results I have found are surprising at all. It is well known that race and sex have an effect on income as discrimination is very real. It is also not surprising that former convicts have a harder time making a high income. Divorce and separation are typically very costly processes and losing a spouse to death can be financially very stressful for many people. Overall, I am very confident in the results I have found from this study and I would feel comfortable presenting them to policy-makers.
